@@ -1,0 +1,9 @@
+node_modules
+data
+images
+snapshots
+.DS_Store
+*.log
+tmp
+.git
+.cache

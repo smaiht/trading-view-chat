@@ -1,0 +1,70 @@
+services:
+  redis:
+    image: redis:8.2.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDISPORT:-6399}:6379"
+
+  postgres:
+    image: timescale/timescaledb:latest-pg18
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-tv_chat}
+      - POSTGRES_USER=${POSTGRES_USER:-trader}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "127.0.0.1:${PGPORT:-5444}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trader} -d ${POSTGRES_DB:-tv_chat}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  scraper:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-tv_chat}
+      - REDIS_HOST=redis
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    restart: unless-stopped
+
+  janitor:
+    build: .
+    command: ["sh", "-c", "while true; do node scripts/cleanup-images.js; sleep ${CLEANUP_INTERVAL:-3600}; done"]
+    env_file: .env
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    restart: unless-stopped
+
+  telegram:
+    build: .
+    command: ["node", "cli/telegram-forwarder.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-tv_chat}
+      - REDIS_HOST=redis
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  node_modules:

@@ -1,0 +1,21 @@
+{
+  "name": "tv-chat-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TradingView chat scraper (snapshot + stream) with Postgres persistence",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node cli/stream.js",
+    "fetch-once": "node cli/fetch-once.js",
+    "stream": "node cli/stream.js",
+    "cleanup": "node scripts/cleanup-images.js",
+    "telegram": "node cli/telegram-forwarder.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "redis": "^4.6.13",
+    "pg": "^8.12.0",
+    "puppeteer": "24.2.0"
+  }
+}

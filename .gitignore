@@ -1,0 +1,10 @@
+.env
+node_modules
+package-lock.json
+.DS_Store
+.vscode
+__pycache__/
+
+# Images - keep folder, ignore contents
+data/images/*
+!data/images/.gitkeep
