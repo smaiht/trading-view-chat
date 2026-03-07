@@ -123,6 +123,26 @@ class TelegramClient {
       disable_web_page_preview,
     });
   }
+
+  async deleteMessage(message_id) {
+    return this._callJson('deleteMessage', { chat_id: this.chatId, message_id });
+  }
+
+  async pinChatMessage(message_id, disable_notification = true) {
+    return this._callJson('pinChatMessage', { chat_id: this.chatId, message_id, disable_notification });
+  }
+
+  async unpinChatMessage(message_id) {
+    return this._callJson('unpinChatMessage', { chat_id: this.chatId, message_id });
+  }
+
+  async getChat() {
+    return this._callJson('getChat', { chat_id: this.chatId });
+  }
+
+  async getMe() {
+    return this._callJson('getMe', {});
+  }
 }
 
 module.exports = { TelegramClient, escHtml };

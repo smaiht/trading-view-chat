@@ -191,8 +191,8 @@ class SeqQueue {
   // ============================================================
   // BTC Price Updater (parallel task) - via OKX Public API
   // ============================================================
-  const PRICE_UPDATE_INTERVAL = 60 * 1000; // 1 minute (API is public, no need to hammer)
-  const PRICE_MESSAGE_ID = process.env.BTC_PRICE_MESSAGE_ID ? parseInt(process.env.BTC_PRICE_MESSAGE_ID, 10) : 0;
+  const PRICE_UPDATE_INTERVAL = 60 * 1000;
+  let lastPriceMsgId = null;
 
   function formatNumber(num, decimals = 2) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -259,13 +259,22 @@ class SeqQueue {
 
       msg += `⏰ <i>${timeStr} UTC</i>`;
 
-      // Update message
-      await tg.editMessageText({
-        message_id: PRICE_MESSAGE_ID,
-        text: msg,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      });
+      // Delete old pinned price message, send new one, pin it
+      try {
+        if (!lastPriceMsgId) {
+          const chat = await tg.getChat();
+          if (chat.pinned_message) lastPriceMsgId = chat.pinned_message.message_id;
+        }
+        if (lastPriceMsgId) {
+          await tg.unpinChatMessage(lastPriceMsgId).catch(() => {});
+          await tg.deleteMessage(lastPriceMsgId).catch(() => {});
+          lastPriceMsgId = null;
+        }
+      } catch {}
+
+      const res = await tg.sendMessage({ text: msg, parse_mode: 'HTML', disable_web_page_preview: true });
+      lastPriceMsgId = res.message_id;
+      await tg.pinChatMessage(lastPriceMsgId, true).catch(e => console.error(`[BTC] Pin failed: ${e.message}`));
 
       console.log(`[BTC] Updated: $${formatNumber(ticker.last, 1)} (${sign}${change24h?.toFixed(2) || '0.00'}%)`);
 
@@ -278,13 +287,10 @@ class SeqQueue {
   }
 
   // Start price updater
-  if (PRICE_MESSAGE_ID > 0) {
-    console.log(`[BTC] Price updater enabled. Message ID: ${PRICE_MESSAGE_ID}, Interval: ${PRICE_UPDATE_INTERVAL/1000}s`);
-    updateBtcPrice(); // Initial update
-    setInterval(updateBtcPrice, PRICE_UPDATE_INTERVAL);
-  } else {
-    console.log(`[BTC] Price updater disabled (BTC_PRICE_MESSAGE_ID not set)`);
-  }
+  console.log(`[BTC] Price updater enabled. Interval: ${PRICE_UPDATE_INTERVAL/1000}s`);
+  updateBtcPrice();
+  setInterval(updateBtcPrice, PRICE_UPDATE_INTERVAL);
+  // ============================================================
   // ============================================================
 
   process.on('SIGINT', async () => { try { await sub.quit(); } catch {} try { await db.pool.end(); } catch {} process.exit(0); });
