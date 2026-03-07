@@ -224,7 +224,7 @@ class SeqQueue {
     const res = await fetch('https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP');
     const json = await res.json();
     if (json.code !== '0' || !json.data?.[0]) return null;
-    return parseFloat(json.data[0].fundingRate);
+    return json.data[0].fundingRate;
   }
 
   async function updateBtcPrice() {
@@ -254,32 +254,44 @@ class SeqQueue {
       // Volume + Funding
       let stats = [];
       if (ticker.vol24h) stats.push(`Vol: ${formatVolume(ticker.vol24h)}`);
-      if (fundingRate !== null) stats.push(`FR: ${(fundingRate * 100).toFixed(4)}%`);
+      if (fundingRate !== null) stats.push(`FR: ${fundingRate}`);
       if (stats.length) msg += `📈 ${stats.join(' • ')}\n\n`;
 
       msg += `⏰ <i>${timeStr} UTC</i>`;
 
-      // Delete old pinned price message, send new one, pin it
-      try {
-        if (!lastPriceMsgId) {
-          const chat = await tg.getChat();
-          if (chat.pinned_message) lastPriceMsgId = chat.pinned_message.message_id;
-        }
-        if (lastPriceMsgId) {
-          await tg.unpinChatMessage(lastPriceMsgId).catch(() => {});
-          await tg.deleteMessage(lastPriceMsgId).catch(() => {});
-          lastPriceMsgId = null;
-        }
-      } catch {}
+      const PIN_ENABLED = false; // flip to true to enable pinned price messages
 
-      const res = await tg.sendMessage({ text: msg, parse_mode: 'HTML', disable_web_page_preview: true });
-      lastPriceMsgId = res.message_id;
-      await tg.pinChatMessage(lastPriceMsgId, true).catch(e => console.error(`[BTC] Pin failed: ${e.message}`));
+      // Delete old pinned price message, send new one, pin it
+      if (PIN_ENABLED) {
+        try {
+          if (!lastPriceMsgId) {
+            const chat = await tg.getChat();
+            if (chat.pinned_message) lastPriceMsgId = chat.pinned_message.message_id;
+          }
+          if (lastPriceMsgId) {
+            await tg.unpinChatMessage(lastPriceMsgId).catch(() => {});
+            await tg.deleteMessage(lastPriceMsgId).catch(() => {});
+            lastPriceMsgId = null;
+          }
+        } catch {}
+
+        const res = await tg.sendMessage({ text: msg, parse_mode: 'HTML', disable_web_page_preview: true });
+        lastPriceMsgId = res.message_id;
+        await tg.pinChatMessage(lastPriceMsgId, true).catch(e => console.error(`[BTC] Pin failed: ${e.message}`));
+      }
+
+      // Update channel title with compact price
+      const arrow = change24h >= 0 ? '↑' : '↓';
+      const hi = formatNumber(ticker.high24h, 0);
+      const lo = formatNumber(ticker.low24h, 0);
+      const vol = formatVolume(ticker.vol24h);
+      const fr = fundingRate !== null ? ` FR:${fundingRate}` : '';
+      const title = `TradingView | BTC $${formatNumber(ticker.last, 0)} ${arrow}${Math.abs(change24h || 0).toFixed(1)}% H:${hi} L:${lo} Vol:${vol}${fr}`;
+      await tg.setChatTitle(title).catch(() => {});
 
       console.log(`[BTC] Updated: $${formatNumber(ticker.last, 1)} (${sign}${change24h?.toFixed(2) || '0.00'}%)`);
 
     } catch (err) {
-      // Silently ignore "message is not modified" errors
       if (err.message && !err.message.includes('message is not modified')) {
         console.error(`[BTC] Error: ${err.message}`);
       }

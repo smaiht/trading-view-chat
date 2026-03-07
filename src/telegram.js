@@ -136,6 +136,10 @@ class TelegramClient {
     return this._callJson('unpinChatMessage', { chat_id: this.chatId, message_id });
   }
 
+  async setChatTitle(title) {
+    return this._callJson('setChatTitle', { chat_id: this.chatId, title });
+  }
+
   async getChat() {
     return this._callJson('getChat', { chat_id: this.chatId });
   }
