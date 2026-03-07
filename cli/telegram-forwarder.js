@@ -287,7 +287,18 @@ class SeqQueue {
       const vol = formatVolume(ticker.vol24h);
       const fr = fundingRate !== null ? ` FR:${fundingRate}` : '';
       const title = `TradingView | BTC $${formatNumber(ticker.last, 0)} ${arrow}${Math.abs(change24h || 0).toFixed(1)}% H:${hi} L:${lo} Vol:${vol}${fr}`;
-      await tg.setChatTitle(title).catch(() => {});
+      const titleChanged = await tg.setChatTitle(title).catch(() => false);
+      if (titleChanged) {
+        try {
+          const updates = await tg.getUpdates();
+          for (const u of updates) {
+            const post = u.channel_post || u.message;
+            if (post && post.new_chat_title) {
+              await tg.deleteMessage(post.message_id).catch(() => {});
+            }
+          }
+        } catch {}
+      }
 
       console.log(`[BTC] Updated: $${formatNumber(ticker.last, 1)} (${sign}${change24h?.toFixed(2) || '0.00'}%)`);
 
