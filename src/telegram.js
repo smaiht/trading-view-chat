@@ -144,10 +144,6 @@ class TelegramClient {
     return this._callJson('getChat', { chat_id: this.chatId });
   }
 
-  async getMe() {
-    return this._callJson('getMe', {});
-  }
-
   async getUpdates(offset = -1, limit = 10, timeout = 0) {
     return this._callJson('getUpdates', { offset, limit, timeout, allowed_updates: ['channel_post'] });
   }

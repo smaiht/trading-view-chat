@@ -21,6 +21,5 @@ module.exports = {
   imagesDir: process.env.IMAGES_DIR || path.join(process.cwd(), 'data', 'images'),
   // Telegram
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
-  telegramBotToken2: process.env.TELEGRAM_BOT_TOKEN_2 || null,
-  telegramChatId: process.env.TELEGRAM_CHAT_ID || null, // e.g. '@trading_view_chat' or numeric id like -100xxxxxxxxxx
+  telegramChatId: process.env.TELEGRAM_CHAT_ID || null,
 };

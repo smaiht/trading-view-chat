@@ -5,50 +5,6 @@ const puppeteer = require('puppeteer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function replaceEmojisInNode(el) {
-  // executed in page context
-  const MAP = {
-    // Gestures
-    ':agree:':'👍', ':disagree:':'👎', ':okay:':'👌', ':peace:':'✌️', ':wait:':'👆', ':wave:':'👋', ':raised_hands:':'🙌', ':pray:':'🙏',
-    // Faces
-    ':)':'🙂', ':D':'😄', ':joy:':'😂', ';)':'😉', ':love:':'😍', ':P':'😛', ':flushed:':'😳', ':|':'😐', ':thinking_face:':'🤔', ':(':'🙁', ':weary:':'😩', ":'(":'😢', ':cry:':'😭', ':panic:':'😱', ':rage:':'😡', ':triumph:':'😤', ':mask:':'😷', ':shades:':'😎', ':sleepy:':'😴', 'o_O':'😲', ':halo:':'😇', ':sarcasm:':'😬', ']:-)':'😈', ':money_mouth:':'🤑',
-    // Trading and status
-    ':zzz:':'💤', ':buy:':':buy:', ':sell:':':sell:', ':profit:':':profit:', ':loss:':':loss:', ':uptrend:':'📈', ':downtrend:':'📉',
-    // Markets and currency (kept codes where requested)
-    ':bear:':':bear:', ':bull:':':bull:', ':dollar:':':dollar:', ':euro:':':euro:', ':pound:':':pound:', ':yen:':':yen:', ':bitcoin:':':bitcoin:', ':ethereum:':':ethereum:', ':moneybag:':'💰',
-    // Food and drink
-    ':cookie:':'🍪', ':coffee:':'☕', ':popcorn:':'🍿', ':cocktail:':'🍸', ':hot:':'🔥',
-    // Hearts and misc
-    ':poop:':'💩', ':heart:':'❤️', ':heartbroken:':'💔',
-    // Weather and nature
-    ':sun:':'☀️', ':moon:':'🌚', ':sunflower:':'🌻', ':star:':'⭐', ':sunny:':'🌤️', ':partly_sunny:':'⛅', ':cloud:':'☁️', ':zap:':'⚡',
-    // Objects and activities
-    ':hammer:':'🔨', ':idea:':'💡', ':slot_machine:':'🎰', ':bullseye:':'🎯', ':rocket:':'🚀', ':inverted_rocket:':':inverted_rocket:', ':checkered_flag:':'🏁', ':alarm_clock:':'⏰', ':rip:':'🪦', ':ghost:':'👻',
-    // UI/labels
-    ':up:':'🆙', ':cool:':'🆒', ':free:':'🆓', ':sos:':'🆘', ':100:':'💯', ':stop:':'⛔',
-  };
-  const mapCode = (s) => {
-    if (!s) return '';
-    const t = String(s).trim();
-    return MAP.hasOwnProperty(t) ? MAP[t] : t;
-  };
-  el.querySelectorAll('.tv-emoji-wrapper').forEach((em) => {
-    const t = em.getAttribute('title') || '';
-    const span = document.createElement('span');
-    const mapped = mapCode(t);
-    span.textContent = mapped ? ` ${mapped} ` : '';
-    em.replaceWith(span);
-  });
-  el.querySelectorAll('img[alt]').forEach((img) => {
-    const alt = (img.getAttribute('alt') || '').trim();
-    if (!alt) return;
-    const span = document.createElement('span');
-    const mapped = mapCode(alt);
-    span.textContent = ` ${mapped} `;
-    img.replaceWith(span);
-  });
-}
-
 function parseUTCFromTitle(titleStr) {
   if (!titleStr) return null;
   const m = titleStr.match(/^(\d{2}:\d{2})\s*-\s*(.+)$/);
@@ -73,19 +29,6 @@ function parseUTCFromRelative(rel) {
   if (h) return new Date(now - parseInt(h[1],10)*3600*1000).toISOString();
   return null;
 }
-
-function compactUTC(isoStr) {
-  if (!isoStr) return null;
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return null;
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth()+1).padStart(2,'0');
-  const da = String(d.getUTCDate()).padStart(2,'0');
-  const hh = String(d.getUTCHours()).padStart(2,'0');
-  const mm = String(d.getUTCMinutes()).padStart(2,'0');
-  return `${y}-${m}-${da}T${hh}:${mm}Z`;
-}
-function compactUTCNoZ(isoStr) { const s = compactUTC(isoStr); return s ? s.replace(/Z$/, '') : null; }
 
 async function downloadBinary(urlStr) {
   const res = await fetch(urlStr, { headers: { Referer: 'https://www.tradingview.com/' } });
@@ -116,72 +59,6 @@ async function downloadImagesForMessage({ id, urls, imagesDir }) {
   return saved;
 }
 
-function jaccard(a, b) {
-  const norm = (s) => (s || '').toLowerCase().replace(/https?:\S+/g, '').replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const ta = new Set(norm(a).split(' ').filter(w => w.length > 2));
-  const tb = new Set(norm(b).split(' ').filter(w => w.length > 2));
-  if (!ta.size || !tb.size) return 0;
-  let inter = 0; for (const w of ta) if (tb.has(w)) inter++;
-  const uni = ta.size + tb.size - inter;
-  return inter / uni;
-}
-
-function resolveReplies(messages, recent = []) {
-  const byUser = new Map();
-  const all = [...recent, ...messages];
-  all.forEach((m, i) => {
-    if (!m.username) return;
-    const k = m.username.toLowerCase();
-    if (!byUser.has(k)) byUser.set(k, []);
-    byUser.get(k).push({ idx: i, id: m.id, text: m.text });
-  });
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i];
-    if (!m.quotes || !m.quotes.length) continue;
-    const q = m.quotes[0];
-    if (!q.user) continue;
-    const k = q.user.toLowerCase();
-    const list = (byUser.get(k) || []).filter(x => x.id !== m.id);
-    let best = null; let score = -1;
-    for (const cand of list) {
-      let sc = 0;
-      if (q.text && cand.text) {
-        if (q.text.includes(cand.text) || cand.text.includes(q.text)) sc = 2; else sc = jaccard(q.text, cand.text);
-      }
-      if (sc > score) { score = sc; best = cand; }
-    }
-    if (best && (score >= 0.3 || score === 2)) {
-      messages[i].reply_to_id = best.id;
-      continue;
-    }
-    // Fallback: link by overlapping image tokens from quoted block
-    const allQuoteImgs = Array.isArray(m.quotes) ? m.quotes.flatMap(q => Array.isArray(q.images) ? q.images : []) : [];
-    if (allQuoteImgs.length) {
-      const tokenOf = (u) => {
-        if (!u) return null;
-        const m1 = String(u).match(/\/x\/([A-Za-z0-9]+)/i); if (m1) return m1[1];
-        const m2 = String(u).match(/\/snapshots\/([a-z])\/([A-Za-z0-9]+)\.(png|webp)/i); if (m2) return m2[2];
-        return String(u);
-      };
-      const qTokens = new Set(allQuoteImgs.map(tokenOf).filter(Boolean));
-      if (qTokens.size) {
-        const searchBefore = [...recent, ...messages.slice(0, i)];
-        const candidates = searchBefore.filter(mm => mm && mm.username && mm.username.toLowerCase() === k && Array.isArray(mm.images) && mm.images.length);
-        let bestCand = null;
-        for (let j = candidates.length - 1; j >= 0; j--) {
-          const c = candidates[j];
-          const cTokens = new Set((c.images || []).map(tokenOf).filter(Boolean));
-          const has = Array.from(qTokens).some(t => cTokens.has(t));
-          if (has) { bestCand = c; break; }
-        }
-        if (bestCand) {
-          messages[i].reply_to_id = bestCand.id;
-        }
-      }
-    }
-  }
-}
-
 async function extractAllMessages(page) {
   const items = await page.evaluate(() => {
     function replaceEmojisInNode(el) {
@@ -202,11 +79,6 @@ async function extractAllMessages(page) {
     }
     const container = document.querySelector('.ch-data') || document.body;
     const nodes = Array.from(container.querySelectorAll('.ch-item'));
-    function tidy(el) {
-      replaceEmojisInNode(el);
-      el.querySelectorAll('.ch-item-snapshot-link,.tv-widget-chart-like-button').forEach(n => n.remove());
-      return (el.innerText || '').replace(/\n{2,}/g, '\n').trim();
-    }
     const out = [];
     for (const it of nodes) {
       const id = it.getAttribute('id') || '';
@@ -346,8 +218,6 @@ async function extractAllMessages(page) {
     let us = String(lastOffsetUs);
     if (us.length < 6) us = ('000000'.slice(us.length)) + us;
     const utc = baseIso.replace(/\.\d{3}Z$/, `.${us}Z`);
-    const utcCompact = compactUTC(utc);
-    const utcCompactNoZ = compactUTCNoZ(utc);
     return {
       id: e.id,
       username: e.username,
@@ -357,9 +227,6 @@ async function extractAllMessages(page) {
       time_title: e.timeTitle,
       time_rel: e.timeRel,
       utc,
-      utc_compact: utcCompact,
-      utc_compact_noz: utcCompactNoZ,
-      // no top-level quote unions; quotes array carries media per quote
       text: e.text,
       quotes: e.quotes,
       images: e.images,
@@ -424,10 +291,8 @@ module.exports = {
   launchBrowser,
   navigateRoom,
   extractAllMessages,
-  resolveReplies,
   downloadImagesForMessage,
   fetchIdeaDetails,
   parseUTCFromTitle,
   parseUTCFromRelative,
-  compactUTCNoZ,
 };
