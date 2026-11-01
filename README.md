@@ -2,7 +2,7 @@
 
 Real-time scraper for TradingView public chat. Saves messages to PostgreSQL and forwards to Telegram.
 
-> ⚠️ **TradingView retired public chats on Sep 30, 2026** ([announcement](https://www.tradingview.com/support/solutions/43000591339-public-chats-are-being-retired-on-sep-30-2026/)), `/chat/` now returns 404. The `scraper` service is disabled by default (compose profile `scraper`); `telegram` keeps updating the BTC price.
+> ⚠️ **TradingView retired public chats on Sep 30, 2026** ([announcement](https://www.tradingview.com/support/solutions/43000591339-public-chats-are-being-retired-on-sep-30-2026/)), `/chat/` now returns 404. The `scraper` service is disabled by default (compose profile `scraper`). New posts now come from **TradingView Minds** (`minds` service), see [PROGRESS.md](PROGRESS.md).
 
 **Live demo:** [@trading_view_chat](https://t.me/trading_view_chat)
 
@@ -62,7 +62,8 @@ docker compose up -d
 
 | Service | Description |
 |---------|-------------|
-| `scraper` | Main chat scraper (disabled, `--profile scraper`) |
+| `minds` | Minds poller (BTCUSD + BTCUSDT feeds) → Postgres + Redis |
+| `scraper` | Old chat scraper (disabled, `--profile scraper`) |
 | `telegram` | Telegram forwarder + BTC price |
 | `janitor` | Image cleanup |
 | `postgres` | TimescaleDB (PostgreSQL 18) |
@@ -71,6 +72,6 @@ docker compose up -d
 ## Commands
 
 ```bash
-docker compose logs -f scraper   # Scraper logs
+docker compose logs -f minds     # Minds poller logs
 docker compose logs -f telegram  # Telegram logs
 ```

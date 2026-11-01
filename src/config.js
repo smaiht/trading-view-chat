@@ -19,6 +19,10 @@ module.exports = {
   saveImages: boolFromEnv('SAVE_IMAGES', true),
   saveIdeas: boolFromEnv('SAVE_IDEAS', true),
   imagesDir: process.env.IMAGES_DIR || path.join(process.cwd(), 'data', 'images'),
+  // Minds (BITSTAMP:BTCUSD and BINANCE:BTCUSDT are separate feeds; other exchanges share one of them)
+  mindsSymbols: (process.env.MINDS_SYMBOLS || 'BITSTAMP:BTCUSD,BINANCE:BTCUSDT').split(',').map(s => s.trim()).filter(Boolean),
+  mindsPollInterval: (parseInt(process.env.MINDS_POLL_INTERVAL, 10) || 60) * 1000,
+  mindsBackfillMinutes: parseInt(process.env.MINDS_BACKFILL_MINUTES, 10) || 60,
   // Telegram
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
   telegramChatId: process.env.TELEGRAM_CHAT_ID || null,

@@ -9,6 +9,7 @@
     "start": "node cli/stream.js",
     "fetch-once": "node cli/fetch-once.js",
     "stream": "node cli/stream.js",
+    "minds": "node cli/minds.js",
     "cleanup": "node scripts/cleanup-images.js",
     "telegram": "node cli/telegram-forwarder.js"
   },
