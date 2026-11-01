@@ -2,6 +2,8 @@
 
 Real-time scraper for TradingView public chat. Saves messages to PostgreSQL and forwards to Telegram.
 
+> ⚠️ **TradingView retired public chats on Sep 30, 2026** ([announcement](https://www.tradingview.com/support/solutions/43000591339-public-chats-are-being-retired-on-sep-30-2026/)), `/chat/` now returns 404. The `scraper` service is disabled by default (compose profile `scraper`); `telegram` keeps updating the BTC price.
+
 **Live demo:** [@trading_view_chat](https://t.me/trading_view_chat)
 
 ![Demo](demo.png)
@@ -60,7 +62,7 @@ docker compose up -d
 
 | Service | Description |
 |---------|-------------|
-| `scraper` | Main chat scraper |
+| `scraper` | Main chat scraper (disabled, `--profile scraper`) |
 | `telegram` | Telegram forwarder + BTC price |
 | `janitor` | Image cleanup |
 | `postgres` | TimescaleDB (PostgreSQL 18) |

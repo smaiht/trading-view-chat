@@ -32,8 +32,11 @@ services:
       timeout: 3s
       retries: 30
 
+  # TradingView retired public chats on 2026-09-30 (/chat/ is 404), so the
+  # scraper has nothing to read. Start it explicitly: --profile scraper
   scraper:
     <<: *app-base
+    profiles: ["scraper"]
     depends_on:
       postgres:
         condition: service_healthy
