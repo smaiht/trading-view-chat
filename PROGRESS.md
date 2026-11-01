@@ -26,8 +26,26 @@
   - `tradingview.com/x/<id>/` links and `snapshot_url` are sent as photos (`s3.tradingview.com/snapshots/...png`).
   - Env: `MINDS_SYMBOLS`, `MINDS_POLL_INTERVAL`, `MINDS_BACKFILL_MINUTES` (see `.env.example`).
 
+### Ideas (added the same day)
+- [x] Ideas are not Minds: full analyses (title, chart, long text, author updates like "Trade closed: target reached").
+- [x] API, public, no login:
+  - list: `GET /api/v1/ideas/?symbol=BITSTAMP%3ABTCUSD` — 20 per page, `description` cut at 500 chars,
+    mostly newest first but some older "hot" ideas are mixed in (hence the max-age filter).
+  - full: `GET /api/v1/ideas/<uuid>/` — `description_ast` (b / i / symbol / url / image snapshots), `updates[]`,
+    `direction` (1 long, 2 short), `interval` (`15`, `60`, `240`, `1D`, `1W`...). Its `chart_url` is relative.
+  - volume: ~20 ideas / 19 h for BTCUSD, similar for BTCUSDT.
+- [x] New `ideas` service (`cli/ideas.js`, `src/ideas.js`, `src/telegraph.js`), polls every 5 min:
+  - Telegram post = chart photo (`image.big`) + caption: title, 🟢 Long / 🔴 Short · symbol · timeframe, author,
+    excerpt (caption limit 1024), links "📖 Full idea" (Telegraph, opens as Instant View) and "TradingView".
+  - Telegraph page = chart, meta, full text with embedded charts, "Updates" section, link back to TradingView.
+  - Stored in `tv_ideas` (`idea_id` = uuid, `raw.feed` = feed symbol) + new columns `telegraph_url`, `tg_msg_id`.
+  - First run per feed: only ideas from the last `IDEAS_BACKFILL_MINUTES` (120) are sent; later: anything new
+    younger than `IDEAS_MAX_AGE_HOURS` (24). If sending fails the idea is not saved and is retried next poll.
+  - Telegraph account `tv_ideas`, token in `.env` as `TELEGRAPH_TOKEN` (local and server).
+
 ### Next
 - [ ] Watch the channel for a day: formatting, images, volume.
+- [ ] Ideas: maybe filter by likes/author if the channel gets too noisy; post author updates (TP hit etc.) as replies.
 - [ ] Comments under Minds posts (`total_comments`) as Telegram replies — needs the comments endpoint.
 - [ ] More feeds if it is too quiet (e.g. ETH, or `CRYPTOCAP:BTC` — that one is almost dead, last posts months old).
 - [ ] Alternative if Minds is not enough: join a large private TradingView group with our account and read it logged in.

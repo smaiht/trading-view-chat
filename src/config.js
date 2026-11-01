@@ -23,6 +23,12 @@ module.exports = {
   mindsSymbols: (process.env.MINDS_SYMBOLS || 'BITSTAMP:BTCUSD,BINANCE:BTCUSDT').split(',').map(s => s.trim()).filter(Boolean),
   mindsPollInterval: (parseInt(process.env.MINDS_POLL_INTERVAL, 10) || 60) * 1000,
   mindsBackfillMinutes: parseInt(process.env.MINDS_BACKFILL_MINUTES, 10) || 60,
+  // Ideas (same feed grouping as Minds)
+  ideasSymbols: (process.env.IDEAS_SYMBOLS || 'BITSTAMP:BTCUSD,BINANCE:BTCUSDT').split(',').map(s => s.trim()).filter(Boolean),
+  ideasPollInterval: (parseInt(process.env.IDEAS_POLL_INTERVAL, 10) || 300) * 1000,
+  ideasBackfillMinutes: parseInt(process.env.IDEAS_BACKFILL_MINUTES, 10) || 120,
+  ideasMaxAgeHours: parseInt(process.env.IDEAS_MAX_AGE_HOURS, 10) || 24,
+  telegraphToken: process.env.TELEGRAPH_TOKEN || null,
   // Telegram
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || null,
   telegramChatId: process.env.TELEGRAM_CHAT_ID || null,

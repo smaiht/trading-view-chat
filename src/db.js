@@ -130,6 +130,20 @@ class DB {
     );
   }
 
+  async ideaExists(idea_id) {
+    const r = await this.pool.query(`SELECT 1 FROM tv_ideas WHERE idea_id=$1`, [idea_id]);
+    return r.rows.length > 0;
+  }
+
+  async hasIdeasFromFeed(feed) {
+    const r = await this.pool.query(`SELECT 1 FROM tv_ideas WHERE raw->>'feed'=$1 LIMIT 1`, [feed]);
+    return r.rows.length > 0;
+  }
+
+  async setIdeaForwarded(idea_id, telegraphUrl, tgMsgId) {
+    await this.pool.query(`UPDATE tv_ideas SET telegraph_url=$2, tg_msg_id=$3 WHERE idea_id=$1`, [idea_id, telegraphUrl || null, tgMsgId || null]);
+  }
+
   async insertImages({ message_id, idea_id, images }) {
     if (!images || !images.length) return;
     for (const img of images) {

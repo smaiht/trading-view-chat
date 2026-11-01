@@ -63,6 +63,7 @@ docker compose up -d
 | Service | Description |
 |---------|-------------|
 | `minds` | Minds poller (BTCUSD + BTCUSDT feeds) → Postgres + Redis |
+| `ideas` | Ideas poller → Telegram (chart + excerpt) with full text on Telegraph |
 | `scraper` | Old chat scraper (disabled, `--profile scraper`) |
 | `telegram` | Telegram forwarder + BTC price |
 | `janitor` | Image cleanup |
@@ -73,5 +74,6 @@ docker compose up -d
 
 ```bash
 docker compose logs -f minds     # Minds poller logs
+docker compose logs -f ideas     # Ideas poller logs
 docker compose logs -f telegram  # Telegram logs
 ```

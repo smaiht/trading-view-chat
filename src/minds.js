@@ -13,11 +13,15 @@ async function fetchMinds(symbol) {
   return Array.isArray(data?.results) ? data.results : [];
 }
 
-// tradingview.com/x/ABCD1234/ -> s3 snapshot png (same mapping the chat scraper relied on)
+// Snapshot id (as in tradingview.com/x/ABCD1234/) -> s3 png (same mapping the chat scraper relied on)
+function snapshotUrl(id) {
+  if (!id || !/^[A-Za-z0-9]+$/.test(id)) return null;
+  return `https://s3.tradingview.com/snapshots/${id[0].toLowerCase()}/${id}.png`;
+}
+
 function snapshotFromXLink(u) {
   const m = String(u || '').match(/tradingview\.com\/x\/([A-Za-z0-9]+)/i);
-  if (!m) return null;
-  return `https://s3.tradingview.com/snapshots/${m[1][0].toLowerCase()}/${m[1]}.png`;
+  return m ? snapshotUrl(m[1]) : null;
 }
 
 // Flatten text_ast into plain text; collect images and idea links on the way
@@ -46,7 +50,19 @@ function renderAst(ast) {
   function block(n) {
     if (typeof n === 'string') return n;
     switch (n?.type) {
-      case 'root': return (n.children || []).map(block).filter(s => s.trim()).join('\n\n');
+      case 'root': {
+        // Block children (p/list/quote) are separated by blank lines, inline runs are concatenated
+        let out = '';
+        let prevBlock = false;
+        for (const c of n.children || []) {
+          const isBlock = ['p', 'list', 'quote'].includes(c?.type);
+          const s = block(c);
+          if (isBlock && !s.trim()) continue;
+          out += (out && (isBlock || prevBlock) ? '\n\n' : '') + s;
+          prevBlock = isBlock;
+        }
+        return out;
+      }
       case 'list': return (n.children || []).map(li => `• ${inline(li).trim()}`).join('\n');
       case 'quote': return (n.children || []).map(inline).join('').split('\n').map(s => `> ${s}`).join('\n');
       default: return inline(n);
@@ -82,4 +98,4 @@ function normalizeMind(item, feedSymbol) {
   };
 }
 
-module.exports = { fetchMinds, renderAst, normalizeMind };
+module.exports = { fetchMinds, renderAst, normalizeMind, snapshotUrl };

@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS tv_ideas (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Ideas feed (cli/ideas.js): Telegraph page and Telegram message for forwarded ideas
+ALTER TABLE tv_ideas ADD COLUMN IF NOT EXISTS telegraph_url TEXT;
+ALTER TABLE tv_ideas ADD COLUMN IF NOT EXISTS tg_msg_id BIGINT;
+
 CREATE TABLE IF NOT EXISTS tv_messages (
   id TEXT PRIMARY KEY,
   room TEXT,

@@ -58,6 +58,15 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-tv_chat}
       - REDIS_HOST=redis
 
+  ideas:
+    <<: *app-base
+    command: ["node", "cli/ideas.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-trader}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-tv_chat}
+
   janitor:
     <<: *app-base
     command: ["sh", "-c", "while true; do node scripts/cleanup-images.js; sleep ${CLEANUP_INTERVAL:-3600}; done"]
